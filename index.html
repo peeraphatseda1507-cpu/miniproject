@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Mini Project PRP049 & TNB052</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f4f6f8;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 { margin-top: 20px; }
+
+    .card {
+      background: white;
+      padding: 20px;
+      margin: 15px auto;
+      width: 260px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    button {
+      padding: 12px;
+      width: 100%;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      color: white;
+      cursor: pointer;
+    }
+
+    .blue { background: #1e88e5; }
+    .green { background: #2e7d32; }
+    .gray { background: #757575; }
+    .red { background: #d32f2f; }
+
+    #dashboard { display: none; }
+
+    #loginForm {
+      max-width: 350px;
+      margin: 80px auto;
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 15px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>Mini Project PRP049 & TNB052</h1>
+
+<!-- LOGIN -->
+<div id="loginForm">
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
+  <button class="blue" id="loginBtn">Login</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+
+  <div class="card">
+    <h2>MODE</h2>
+    <p>Status: <b><span id="modeStatus">--</span></b></p>
+    <button class="blue" id="modeBtn">Switch</button>
+  </div>
+
+  <div class="card">
+    <h2>LED 1</h2>
+    <p>Status: <b><span id="status1">--</span></b></p>
+    <button id="btn1" class="gray">Toggle</button>
+  </div>
+
+  <div class="card">
+    <h2>LED 2</h2>
+    <p>Status: <b><span id="status2">--</span></b></p>
+    <button id="btn2" class="gray">Toggle</button>
+  </div>
+
+  <button class="red" onclick="logout()">Logout</button>
+</div>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+
+<script>
+/* 🔥 Firebase Config (ใช้ของคุณ) */
+const firebaseConfig = {
+  apiKey: "AIzaSyBwHPJRgNZQ0HZ4jBab7hJtig81pgVXKWw",
+  authDomain: "miniproject-caa84.firebaseapp.com",
+  databaseURL: "https://miniproject-caa84-default-rtdb.asia-southeast1.firebasedatabase.app/",
+  projectId: "miniproject-caa84",
+  appId: "1:950587298418:web:b55f45a74869eaf1eea8eb"
+};
+firebase.initializeApp(firebaseConfig);
+
+/* 🔐 Login Fix */
+const allowedEmail = "prp150752@gmail.com";
+const allowedPassword = "12345678";
+
+const loginForm = document.getElementById("loginForm");
+const dashboard = document.getElementById("dashboard");
+
+document.getElementById("loginBtn").onclick = () => {
+  const emailVal = document.getElementById("email").value;
+  const passVal = document.getElementById("password").value;
+
+  if (emailVal === allowedEmail && passVal === allowedPassword) {
+    firebase.auth().signInWithEmailAndPassword(emailVal, passVal)
+      .then(() => {
+        loginForm.style.display = "none";
+        dashboard.style.display = "block";
+        startControl();
+      });
+  } else {
+    alert("Invalid Login");
+  }
+};
+
+function logout() {
+  firebase.auth().signOut();
+  location.reload();
+}
+
+/* 🎛 CONTROL */
+function startControl() {
+  const db = firebase.database();
+
+  const modeRef = db.ref("/modeAuto");
+  const led1Ref = db.ref("/led1");
+  const led2Ref = db.ref("/led2");
+
+  let modeAuto = true;
+
+  const modeStatus = document.getElementById("modeStatus");
+  const modeBtn = document.getElementById("modeBtn");
+
+  const status1 = document.getElementById("status1");
+  const btn1 = document.getElementById("btn1");
+
+  const status2 = document.getElementById("status2");
+  const btn2 = document.getElementById("btn2");
+
+  /* MODE */
+  modeRef.on("value", s => {
+    modeAuto = s.val();
+    modeStatus.innerText = modeAuto ? "AUTO" : "MANUAL";
+    modeBtn.innerText = modeAuto ? "Switch to MANUAL" : "Switch to AUTO";
+  });
+
+  modeBtn.onclick = () => modeRef.set(!modeAuto);
+
+  /* LED 1 */
+  led1Ref.on("value", s => {
+    const v = s.val();
+    status1.innerText = v ? "ON" : "OFF";
+    btn1.className = v ? "green" : "gray";
+  });
+
+  btn1.onclick = () => {
+    if (!modeAuto) led1Ref.get().then(s => led1Ref.set(!s.val()));
+    else alert("Switch to MANUAL first");
+  };
+
+  /* LED 2 */
+  led2Ref.on("value", s => {
+    const v = s.val();
+    status2.innerText = v ? "ON" : "OFF";
+    btn2.className = v ? "green" : "gray";
+  });
+
+  btn2.onclick = () => {
+    if (!modeAuto) led2Ref.get().then(s => led2Ref.set(!s.val()));
+    else alert("Switch to MANUAL first");
+  };
+}
+</script>
+
+</body>
+</html>
